@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Memes</title>
+</head>
+
+<body>
+    <h1>Subir un Meme</h1>
+    <form id="uploadForm" method="POST" enctype="multipart/form-data">
+        <label for="descripcion">Descripción:</label>
+        <input type="text" id="descripcion" name="descripcion" required><br>
+
+        <label for="usuario">Usuario:</label>
+        <input type="text" id="usuario" name="usuario" required><br>
+
+        <label for="imagen">Imagen:</label>
+        <input type="file" id="imagen" name="imagen" required><br>
+
+        <label for="etiquetas">Etiquetas (separadas por comas):</label>
+        <input type="text" id="etiquetas" name="etiquetas" placeholder="Ejemplo: etiqueta1, etiqueta2"><br>
+
+        <button type="submit">Subir Meme</button>
+    </form>
+
+    <hr>
+
+    <h2>Buscar Memes</h2>
+    <input type="text" id="searchInput" placeholder="Buscar por descripción o etiqueta">
+    <button id="searchButton">Buscar</button>
+
+    <h2>Memes Subidos</h2>
+    <button id="listarMemes">Actualizar Lista</button>
+    <div id="memesList"></div>
+
+    <script>
+        const uploadForm = document.getElementById('uploadForm');
+        const listarMemesBtn = document.getElementById('listarMemes');
+        const memesListDiv = document.getElementById('memesList');
+        const etiquetasInput = document.getElementById('etiquetas');
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+
+        // Subir un meme
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(uploadForm);
+
+            // Obtener etiquetas ingresadas por el usuario
+            const etiquetasValue = etiquetasInput.value || "";
+            const etiquetasSeleccionadas = etiquetasValue.split(',').map(e => e.trim()).filter(e => e);
+
+            // Agregar etiquetas al FormData
+            etiquetasSeleccionadas.forEach(etiqueta => formData.append('etiquetas', etiqueta));
+
+            try {
+                const response = await fetch('/api/memes', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert(result.message);
+                    listarMemes();
+                    uploadForm.reset();
+                } else {
+                    alert("Error al subir el meme: " + result.error);
+                }
+            } catch (error) {
+                console.error("Error al subir el meme:", error);
+                alert("Error inesperado al intentar subir el meme.");
+            }
+        });
+
+        // Listar memes
+        listarMemesBtn.addEventListener('click', listarMemes);
+
+        async function listarMemes() {
+            try {
+                const response = await fetch('/api/memes');
+                const memes = await response.json();
+
+                memesListDiv.innerHTML = ""; 
+                memes.forEach(meme => {
+                    const memeElement = document.createElement('div');
+                    memeElement.innerHTML = `
+                <h3>${meme.descripcion}</h3>
+                <img src="${meme.ruta}" alt="Meme" width="200">
+                <p>Usuario: ${meme.usuario}</p>
+                <p>Etiquetas: ${meme.etiquetas.join(', ')}</p>
+                <button onclick="eliminarMeme(${meme.id})">Eliminar</button>
+                <hr>
+            `;
+                    memesListDiv.appendChild(memeElement);
+                });
+            } catch (error) {
+                console.error("Error al listar los memes:", error);
+                alert("Error inesperado al listar los memes.");
+            }
+        }
+
+
+        // Buscar memes
+        searchButton.addEventListener('click', async () => {
+            const query = searchInput.value.trim();
+            try {
+                const response = await fetch(`/api/memes/buscar?query=${query}`);
+                const memes = await response.json();
+                mostrarMemes(memes);
+            } catch (error) {
+                console.error("Error en la búsqueda:", error);
+                alert("Error al buscar los memes.");
+            }
+        });
+
+
+        // Mostrar memes
+        function mostrarMemes(memes) {
+            memesListDiv.innerHTML = "";
+            memes.forEach(meme => {
+                const memeElement = document.createElement('div');
+                memeElement.innerHTML = `
+                    <h3>${meme.descripcion}</h3>
+                    <img src="${meme.ruta}" alt="Meme" width="200">
+                    <p>Usuario: ${meme.usuario}</p>
+                    <p>Etiquetas: ${meme.etiquetas.join(', ')}</p>
+                    <button onclick="eliminarMeme(${meme.id})">Eliminar</button>
+                    <hr>
+                `;
+                memesListDiv.appendChild(memeElement);
+            });
+        }
+
+
+
+        // Eliminar un meme
+        async function eliminarMeme(id) {
+            try {
+                const response = await fetch(`/api/memes/${id}`, { method: 'DELETE' });
+                const result = await response.json();
+                if (response.ok) {
+                    alert(result.message);
+                    listarMemes();
+                } else {
+                    alert("Error al eliminar el meme: " + result.error);
+                }
+            } catch (error) {
+                console.error("Error al eliminar el meme:", error);
+                alert("Error inesperado al intentar eliminar el meme.");
+            }
+        }
+
+        // Inicializar la página cargando la lista de memes
+        document.addEventListener('DOMContentLoaded', listarMemes);
+    </script>
+</body>
+
+</html>

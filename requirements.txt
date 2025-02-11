@@ -1,8 +1,10 @@
 flask
 flask_sqlalchemy
+flask_migrate
 boto3
 requests
 uuid
 python-dotenv
 pymysql
-boto3
+flask-cors
+
